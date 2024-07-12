@@ -1,8 +1,8 @@
-//setting up the next js api route
-import { NextResponse } from "next/server";
-import { readFileSync } from "fs";
 import puppeteer from 'puppeteer';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 const connectedMac = []
+
 
 async function run(adressIp) {
   // Launch a new browser instance
@@ -93,63 +93,46 @@ async function run(adressIp) {
 
   input.type(adressIp)
 
-  console.log(input.value)
-
   const confirm = await frameContent.waitForSelector("#form2 > div:nth-child(3) > input:nth-child(1)")
 
-  confirm.click()
+  await confirm.click()
 
-  const logOut = await topFrameElement.waitForSelector("#logout")
+  page.on("dialog",async(dialog)=>{
+    await dialog.accept()
+  })
+  const logOut = await topFrame.waitForSelector("body > table > tbody > tr:nth-child(2) > td > a:nth-child(4)")
 
-  logOut.click()
+  await logOut.click()
   
-  browser.close()
+  await browser.close()
 }
 
 export async function POST(request,response) {
-  const { mac } = await request.json();
-
+  const { mac , time , name , numero } = await request.json();
+  const dureeDeConnexion = time; // Example duration day
+  const dateConnection = Date.now();
+  const dateDeconnexion = new Date(dateConnection + ( dureeDeConnexion * 86400000)); // Add duration in milliseconds
+  console.log(`date de deconnection ${dateDeconnexion} the calcul result ${new Date(dateConnection + ( dureeDeConnexion * 86400000))} the duration dureeDeConnexion is ${dureeDeConnexion} time is ${dureeDeConnexion}`)
   await run(await mac)
-  .catch((err)=>{
-      return new Response(err)
+  .catch(()=>{
+      return new Response("error occured")
     }
   )
   .then(
-    ()=>{
-      return Response.json({ mac });
+    async ()=>{
+      const newUser = await prisma.user.create({
+        data: {
+          noms: name,
+          mac: mac.toLowerCase() ,
+          numero: numero,
+          dureeDeConnexion: dureeDeConnexion,
+          dateConnection: new Date(dateConnection),
+          dateDeconnexion: dateDeconnexion,
+          heureDeconnection: dateDeconnexion.getTime()
+        }
+      });
+      return Response.json({ mac  });
     }
   )
-  .finally(()=>{
-    if(err){
-      return Response.json(err);
-    }
-  })
+  return Response.json({mac})
 }
-
-
-  // //waiting for the MAC addresses to be available
-  // await frameContent.waitForSelector("#maclist > tbody > tr > td:nth-child(2) > span")
-
-  // //getting the MAC addresses
-  // const macElements = await frameContent.$$("#maclist > tbody > tr > td:nth-child(2) > span")
-
-
-  // // Check if macElements is empty
-  // if (macElements.length === 0) {
-  //   console.log("No MAC addresses found");
-  // } else {
-  //   console.log(`${macElements.length} MAC addresses found`);
-
-  //   //printing the MAC addresses
-  //   for (let i = 0; i < macElements.length; i++) {
-  //     const macText = await frameContent.evaluate(el => el.textContent, macElements[i])
-  //     console.log(macText)
-  //     connectedMac.push(macText)
-  //     console.log("connectedMac: ", connectedMac);
-  //   }
-  // }
-
-  // // Take a screenshot for verification
-  // await page.screenshot({ path: 'urlfilter_left.png' });
-
-  // //closing the browser
