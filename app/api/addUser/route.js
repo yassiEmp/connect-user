@@ -112,7 +112,6 @@ export async function POST(request,response) {
   const dureeDeConnexion = time; // Example duration day
   const dateConnection = Date.now();
   const dateDeconnexion = new Date(dateConnection + ( dureeDeConnexion * 86400000)); // Add duration in milliseconds
-  console.log(`date de deconnection ${dateDeconnexion} the calcul result ${new Date(dateConnection + ( dureeDeConnexion * 86400000))} the duration dureeDeConnexion is ${dureeDeConnexion} time is ${dureeDeConnexion}`)
   await run(await mac)
   .catch(()=>{
       return new Response("error occured")
